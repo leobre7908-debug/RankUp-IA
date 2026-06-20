@@ -95,7 +95,7 @@ const LinkInput = z.object({
 
 export const linkRiotAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => LinkInput.parse(d))
+  .validator((d: unknown) => LinkInput.parse(d))
   .handler(async ({ data, context }) => {
     let puuid: string | null = null;
     let currentRank: string | null = null;
@@ -136,7 +136,7 @@ const GameInput = z.object({ game: z.enum(["valorant", "lol"]).default("valorant
 
 export const getRiotAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => GameInput.parse(d ?? {}))
+  .validator((d: unknown) => GameInput.parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const { data: row } = await context.supabase
       .from("riot_accounts")
@@ -159,7 +159,7 @@ export const getAllAccounts = createServerFn({ method: "GET" })
 
 export const getMatches = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => GameInput.parse(d ?? {}))
+  .validator((d: unknown) => GameInput.parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const { data: rows } = await context.supabase
       .from("matches")
@@ -173,7 +173,7 @@ export const getMatches = createServerFn({ method: "POST" })
 
 export const getAnalyses = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => GameInput.parse(d ?? {}))
+  .validator((d: unknown) => GameInput.parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const { data: rows } = await context.supabase
       .from("analyses")
@@ -198,7 +198,7 @@ export const getProfile = createServerFn({ method: "GET" })
 
 export const getCoachingReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => GameInput.parse(d ?? {}))
+  .validator((d: unknown) => GameInput.parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const { data: lastAnalysis } = await context.supabase
       .from("analyses")
@@ -232,7 +232,7 @@ const TagInput = z.object({ tag: z.string().min(1).max(16) });
 
 export const markTipInProgress = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => TagInput.parse(d))
+  .validator((d: unknown) => TagInput.parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("user_coaching_progress")

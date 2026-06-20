@@ -58,9 +58,7 @@ function AuthPage() {
   };
 
   const onGoogle = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/home",
-    });
+    const result = await lovable.auth.signInWithOAuth("google");
     if (result.error) toast.error("Échec de la connexion Google");
   };
 

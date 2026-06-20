@@ -6,10 +6,10 @@ const Input = z.object({ game: z.enum(["valorant", "lol"]).default("valorant") }
 
 export const runAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => Input.parse(d ?? {}))
+  .validator((d: unknown) => Input.parse(d ?? {}))
   .handler(async ({ data, context }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY manquante.");
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("GEMINI_API_KEY manquante. Génère une clé sur aistudio.google.com");
 
     const [{ data: account }, { data: matches }, { data: tips }, { data: progress }] = await Promise.all([
       context.supabase.from("riot_accounts").select("*").eq("user_id", context.userId).eq("game", data.game).maybeSingle(),
@@ -48,7 +48,7 @@ export const runAnalysis = createServerFn({ method: "POST" })
     const prompt = `Tu es un coach IA expert ${gameLabel}. À partir des stats du joueur ci-dessous, identifie EXACTEMENT 3 faiblesses et associe chacune à un "tag" provenant de la liste ci-dessous (catalogue de coaching).
 
 RÈGLES STRICTES:
-- Réponds UNIQUEMENT en JSON valide.
+- Réponds UNIQUEMENT en JSON valide, sans markdown ni backticks.
 - Tu DOIS choisir 3 tags parmi le catalogue (pas d'invention).
 - Si les stats ne permettent pas de matching précis, choisis en priorité des tags de difficulté "beginner".
 - Pas de doublons (3 tags distincts).
@@ -57,7 +57,7 @@ RÈGLES STRICTES:
 CATALOGUE DISPONIBLE:
 ${JSON.stringify(availableCatalog, null, 2)}
 
-SCHÉMA:
+SCHÉMA DE RÉPONSE:
 {
   "tags": ["TAG-XX","TAG-XX","TAG-XX"],
   "weaknesses": [3 phrases courtes (ordre = tags)],
@@ -66,28 +66,31 @@ SCHÉMA:
   "summary": "1 phrase de synthèse"
 }
 
-STATS:
+STATS DU JOUEUR:
 ${JSON.stringify(stats, null, 2)}`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "Tu es un coach esport. Tu réponds uniquement en JSON valide." },
-          { role: "user", content: prompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
+    // Call Google Gemini API directly
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.7,
+          },
+        }),
+      },
+    );
 
     if (res.status === 429) throw new Error("Trop de requêtes. Réessaie dans un instant.");
-    if (res.status === 402) throw new Error("Crédits IA épuisés.");
-    if (!res.ok) throw new Error(`AI gateway error ${res.status}`);
+    if (res.status === 403) throw new Error("Clé API Gemini invalide ou quota épuisé.");
+    if (!res.ok) throw new Error(`Gemini API error ${res.status}`);
 
     const json = await res.json();
-    const content = json?.choices?.[0]?.message?.content ?? "{}";
+    const content = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
     let parsed: any;
     try { parsed = JSON.parse(content); } catch { throw new Error("Réponse IA invalide."); }
 
