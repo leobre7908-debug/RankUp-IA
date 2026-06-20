@@ -265,6 +265,41 @@ export type Database = {
           },
         ]
       }
+      riot_oauth_states: {
+        Row: {
+          id: string
+          user_id: string
+          state: string
+          game: Database["public"]["Enums"]["game_type"]
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          state: string
+          game: Database["public"]["Enums"]["game_type"]
+          created_at?: string
+          expires_at: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          state?: string
+          game?: Database["public"]["Enums"]["game_type"]
+          created_at?: string
+          expires_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "riot_oauth_states_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
